@@ -1,11 +1,11 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404, redirect
 from django.views import View
 from .models import Link
 from .forms import LinkForm
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
+from django.conf import settings
 
 
-# Create your views here.
 
 
 class CreateorUpdateLinkView(View):
@@ -19,25 +19,25 @@ class CreateorUpdateLinkView(View):
 
         if form.is_valid():
             original_url = form.cleaned_data['url']
-            shortened = form.cleaned_data['shortened_url']
 
-            link_obj = Link.objects.filter(url=original_url).first()
+            link_obj = Link(url=original_url)
+            link_obj.set_short_url()
+            link_obj.save()
 
-            if link_obj:
-                if not shortened:
-                    shortened = link_obj.create_short_url()
-                base_url = ''.join(original_url.split('/', 3)[1:3])
-                base_url = 'https://' + base_url
-                link_obj.shortened_url = base_url + '/' + shortened
-                link_obj.save()
-
-            else:
-                if not shortened:
-                    shortened = Link().create_short_url()
-                base_url = ''.join(original_url.split('/', 3)[1:3])
-                base_url = 'https://' + base_url
-                link_obj = Link.objects.create(url=original_url, shortened_url=base_url + '/' + shortened)
-            
-
-            return HttpResponse(f"short link: {link_obj.shortened_url}")
+            return HttpResponse(f"<p>{settings.HOST}/s/{link_obj.shortened_url}</p>")
         return render(request, 'shortener/short_link.html', {'form': form})
+
+
+class ShortLinkView(View):
+    def get(self, request, code):
+        link = get_object_or_404(Link, shortened_url=code)
+        if link.is_expired():
+            return HttpResponse(status=404)
+        link.increase_views()
+        return HttpResponseRedirect(link.url)
+    
+
+class ViewsDetail(View):
+    def get(self, request, code):
+        link = get_object_or_404(Link, shortened_url=code)
+        return HttpResponse(f"<p>views: {link.views}</p>")

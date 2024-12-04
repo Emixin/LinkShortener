@@ -1,13 +1,13 @@
 from django import forms
-from .models import Link
+from django.core.exceptions import ValidationError
+import re
 
+
+def validate_url(url):
+    regex = r'^https://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+$'
+    if not re.match(regex, url):
+        raise ValidationError("Invalid Link")
+    
 
 class LinkForm(forms.Form):
-    url = forms.URLField(label='Original URL')
-    shortened_url = forms.CharField(label='Your Shortened URl', required=False)
-
-    def clean_shortened_url(self):
-        shortened = self.cleaned_data.get('shortened_url')
-        if shortened and len(shortened) < 6:
-            raise forms.ValidationError("Shortened URL length should be at least 6")
-        return shortened
+    url = forms.URLField(label='Original URL', validators=[validate_url])
