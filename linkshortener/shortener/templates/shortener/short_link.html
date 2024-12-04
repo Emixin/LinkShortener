@@ -1,0 +1,8 @@
+<title>create short link</title>
+
+<form method="POST">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+<button type="submit">short it</botton>
+</form>
